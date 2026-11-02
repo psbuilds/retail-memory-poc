@@ -1,0 +1,50 @@
+[
+  {
+    "customer_id": "customer_001",
+    "facts": [
+      "Prefers affordable wireless headphones.",
+      "Has a budget below ₹3000.",
+      "Uses headphones mainly while travelling.",
+      "Dislikes bulky over-ear designs."
+    ]
+  },
+  {
+    "customer_id": "customer_002",
+    "facts": [
+      "Runs five times a week.",
+      "Needs lightweight and breathable footwear.",
+      "Budget is around ₹4000.",
+      "Prefers to avoid heavy waterproof hiking shoes."
+    ]
+  },
+  {
+    "customer_id": "customer_003",
+    "facts": [
+      "Buys warm layers for work travel.",
+      "Prefers merino wool over synthetic fabrics.",
+      "Wants packable clothing that fits in hand luggage.",
+      "Budget is up to ₹5000.",
+      "Avoids bulky waterproof gear."
+    ]
+  },
+  {
+    "customer_id": "customer_004",
+    "facts": [
+      "Works from home and joins client calls all day.",
+      "Prefers over-ear headphones with noise cancellation.",
+      "Wants a wireless headset for calls.",
+      "Budget is up to ₹8000.",
+      "Dislikes in-ear designs."
+    ]
+  },
+  {
+    "customer_id": "customer_005",
+    "facts": [
+      "Is a student shopping on a tight budget.",
+      "Prefers plain cotton t-shirts.",
+      "Wants casual clothing under ₹1200.",
+      "Avoids synthetic fabrics.",
+      "Does not want heavyweight clothing."
+    ]
+  }
+]

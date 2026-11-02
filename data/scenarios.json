@@ -1,0 +1,194 @@
+[
+  {
+    "id": "scenario_01",
+    "customer_id": "customer_001",
+    "query": "Can you recommend headphones for me?",
+    "scenario_type": "budget",
+    "expected_memory": [
+      "affordable",
+      "wireless",
+      "3000"
+    ],
+    "expected_product_ids": [
+      "p001",
+      "p004"
+    ],
+    "excluded_product_ids": [
+      "p002"
+    ],
+    "expected_behavior": "Recommend wireless headphones below ₹3000 and avoid bulky over-ear models."
+  },
+  {
+    "id": "scenario_02",
+    "customer_id": "customer_002",
+    "query": "I need shoes for my morning runs.",
+    "scenario_type": "feature",
+    "expected_memory": [
+      "lightweight",
+      "breathable",
+      "runs"
+    ],
+    "expected_product_ids": [
+      "p008"
+    ],
+    "excluded_product_ids": [
+      "p009",
+      "p011"
+    ],
+    "expected_behavior": "Recommend lightweight breathable running shoes, not heavy waterproof hiking shoes."
+  },
+  {
+    "id": "scenario_03",
+    "customer_id": "customer_001",
+    "query": "I need something for my daily commute.",
+    "scenario_type": "ambiguous",
+    "expected_memory": [
+      "travelling",
+      "wireless",
+      "bulky"
+    ],
+    "expected_product_ids": [
+      "p001",
+      "p004"
+    ],
+    "excluded_product_ids": [
+      "p002"
+    ],
+    "expected_behavior": "Use travel context and the dislike of bulky designs to pick travel-friendly wireless headphones."
+  },
+  {
+    "id": "scenario_04",
+    "customer_id": "customer_003",
+    "query": "What should I pack for a work trip?",
+    "scenario_type": "mixed",
+    "expected_memory": [
+      "merino",
+      "packable",
+      "travel",
+      "5000"
+    ],
+    "expected_product_ids": [
+      "p014",
+      "p016"
+    ],
+    "excluded_product_ids": [
+      "p017"
+    ],
+    "expected_behavior": "Recommend packable merino layers within budget and avoid bulky waterproof gear."
+  },
+  {
+    "id": "scenario_05",
+    "customer_id": "customer_002",
+    "query": "Do you have any hiking shoes?",
+    "scenario_type": "negative",
+    "expected_memory": [
+      "lightweight",
+      "heavy",
+      "waterproof"
+    ],
+    "expected_product_ids": [
+      "p010"
+    ],
+    "excluded_product_ids": [
+      "p009",
+      "p011"
+    ],
+    "expected_behavior": "Acknowledge the hiking request but steer away from heavy waterproof shoes given the lightweight preference."
+  },
+  {
+    "id": "scenario_06",
+    "customer_id": "customer_004",
+    "query": "I need headphones for my client calls at home.",
+    "scenario_type": "feature",
+    "expected_memory": [
+      "over-ear",
+      "noise",
+      "calls"
+    ],
+    "expected_product_ids": [
+      "p005"
+    ],
+    "excluded_product_ids": [
+      "p002",
+      "p006",
+      "p007"
+    ],
+    "expected_behavior": "Recommend wireless over-ear noise-cancelling headphones within ₹8000 and avoid in-ear designs."
+  },
+  {
+    "id": "scenario_07",
+    "customer_id": "customer_004",
+    "query": "Something that works for long work-from-home days.",
+    "scenario_type": "mixed",
+    "expected_memory": [
+      "wireless",
+      "budget",
+      "8000",
+      "in-ear"
+    ],
+    "expected_product_ids": [
+      "p005"
+    ],
+    "excluded_product_ids": [
+      "p006",
+      "p007"
+    ],
+    "expected_behavior": "Pick the wireless over-ear headset within the ₹8000 budget and avoid in-ear products."
+  },
+  {
+    "id": "scenario_08",
+    "customer_id": "customer_005",
+    "query": "I need something casual to wear to class.",
+    "scenario_type": "budget",
+    "expected_memory": [
+      "cotton",
+      "casual",
+      "1200"
+    ],
+    "expected_product_ids": [
+      "p013"
+    ],
+    "excluded_product_ids": [
+      "p015",
+      "p017"
+    ],
+    "expected_behavior": "Recommend the cotton t-shirt under ₹1200 and avoid synthetic or heavyweight clothing."
+  },
+  {
+    "id": "scenario_09",
+    "customer_id": "customer_005",
+    "query": "Can you add a t-shirt to my order?",
+    "scenario_type": "budget",
+    "expected_memory": [
+      "cotton",
+      "synthetic",
+      "1200"
+    ],
+    "expected_product_ids": [
+      "p013"
+    ],
+    "excluded_product_ids": [
+      "p015"
+    ],
+    "expected_behavior": "Choose the cotton t-shirt over the synthetic one and stay within the ₹1200 budget."
+  },
+  {
+    "id": "scenario_10",
+    "customer_id": "customer_003",
+    "query": "I am going somewhere cold next week.",
+    "scenario_type": "ambiguous",
+    "expected_memory": [
+      "warm",
+      "merino",
+      "packable"
+    ],
+    "expected_product_ids": [
+      "p014",
+      "p016"
+    ],
+    "excluded_product_ids": [
+      "p017"
+    ],
+    "expected_behavior": "Recommend warm packable merino layers rather than the bulky waterproof jacket."
+  }
+]

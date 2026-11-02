@@ -1,0 +1,223 @@
+[
+  {
+    "id": "p001",
+    "name": "Wireless Earbuds",
+    "category": "headphones",
+    "price": 2499,
+    "features": [
+      "wireless",
+      "lightweight",
+      "travel-friendly",
+      "in-ear"
+    ]
+  },
+  {
+    "id": "p002",
+    "name": "Over-Ear Studio Headphones",
+    "category": "headphones",
+    "price": 8999,
+    "features": [
+      "over-ear",
+      "noise-cancelling",
+      "wired",
+      "bulky"
+    ]
+  },
+  {
+    "id": "p003",
+    "name": "Budget Wired Earphones",
+    "category": "headphones",
+    "price": 799,
+    "features": [
+      "wired",
+      "in-ear",
+      "lightweight"
+    ]
+  },
+  {
+    "id": "p004",
+    "name": "Bluetooth Neckband",
+    "category": "headphones",
+    "price": 1999,
+    "features": [
+      "wireless",
+      "neckband",
+      "long-battery",
+      "travel-friendly"
+    ]
+  },
+  {
+    "id": "p005",
+    "name": "Wireless Over-Ear ANC Headphones",
+    "category": "headphones",
+    "price": 7499,
+    "features": [
+      "wireless",
+      "over-ear",
+      "noise-cancelling",
+      "call-friendly"
+    ]
+  },
+  {
+    "id": "p006",
+    "name": "Premium ANC Over-Ear Headset",
+    "category": "headphones",
+    "price": 11999,
+    "features": [
+      "wireless",
+      "over-ear",
+      "noise-cancelling",
+      "call-friendly"
+    ]
+  },
+  {
+    "id": "p007",
+    "name": "Wired In-Ear Monitor",
+    "category": "headphones",
+    "price": 1499,
+    "features": [
+      "wired",
+      "in-ear",
+      "studio"
+    ]
+  },
+  {
+    "id": "p008",
+    "name": "Running Shoes",
+    "category": "footwear",
+    "price": 3499,
+    "features": [
+      "lightweight",
+      "breathable",
+      "running"
+    ]
+  },
+  {
+    "id": "p009",
+    "name": "Trail Hiking Shoes",
+    "category": "footwear",
+    "price": 5499,
+    "features": [
+      "durable",
+      "waterproof",
+      "hiking",
+      "heavy"
+    ]
+  },
+  {
+    "id": "p010",
+    "name": "Everyday Sneakers",
+    "category": "footwear",
+    "price": 2199,
+    "features": [
+      "lightweight",
+      "breathable",
+      "casual"
+    ]
+  },
+  {
+    "id": "p011",
+    "name": "Heavy Waterproof Boots",
+    "category": "footwear",
+    "price": 6999,
+    "features": [
+      "waterproof",
+      "hiking",
+      "heavy",
+      "bulky"
+    ]
+  },
+  {
+    "id": "p012",
+    "name": "Cushioned Walking Shoes",
+    "category": "footwear",
+    "price": 2999,
+    "features": [
+      "cushioned",
+      "lightweight",
+      "casual"
+    ]
+  },
+  {
+    "id": "p013",
+    "name": "Cotton Casual T-Shirt",
+    "category": "apparel",
+    "price": 899,
+    "features": [
+      "cotton",
+      "casual",
+      "regular-fit"
+    ]
+  },
+  {
+    "id": "p014",
+    "name": "Merino Travel Hoodie",
+    "category": "apparel",
+    "price": 4299,
+    "features": [
+      "merino",
+      "travel-friendly",
+      "warm",
+      "lightweight",
+      "packable"
+    ]
+  },
+  {
+    "id": "p015",
+    "name": "Synthetic Gym T-Shirt",
+    "category": "apparel",
+    "price": 749,
+    "features": [
+      "synthetic",
+      "quick-dry",
+      "athletic"
+    ]
+  },
+  {
+    "id": "p016",
+    "name": "Merino Base Layer",
+    "category": "apparel",
+    "price": 3899,
+    "features": [
+      "merino",
+      "warm",
+      "packable",
+      "travel-friendly"
+    ]
+  },
+  {
+    "id": "p017",
+    "name": "Bulky Puffer Jacket",
+    "category": "apparel",
+    "price": 6499,
+    "features": [
+      "bulky",
+      "waterproof",
+      "warm",
+      "heavy"
+    ]
+  },
+  {
+    "id": "p018",
+    "name": "Packable Travel Backpack",
+    "category": "bags",
+    "price": 2799,
+    "features": [
+      "packable",
+      "lightweight",
+      "travel-friendly"
+    ]
+  },
+  {
+    "id": "p019",
+    "name": "Leather Work Tote",
+    "category": "bags",
+    "price": 5599,
+    "features": [
+      "leather",
+      "heavy",
+      "bulky",
+      "professional"
+    ]
+  }
+]
