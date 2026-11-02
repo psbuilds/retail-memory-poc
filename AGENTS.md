@@ -695,3 +695,67 @@ Make sure to ask me and add any further benchmarks that is useful for this speci
 The goal is not to prove that CLI or MCP is universally better.
 
 The goal is to provide a small, reproducible experiment showing the practical trade-offs between CLI/direct integration and MCP integration from both a **developer perspective** and a **real-world AI agent perspective**.
+
+## Code Explanation and Learning Documentation
+
+This project is also a learning and research project. The implementation must be understandable by the developer, not treated as generated code that is accepted without explanation.
+
+### Documentation location
+
+Code explanations must be stored in:
+
+`docs/explanations/`
+
+Create a separate Markdown file for each materially implemented source file.
+
+For example:
+
+- `app/memory/base.py` → `docs/explanations/base.md`
+- `app/memory/cli_adapter.py` → `docs/explanations/cli_adapter.md`
+- `app/memory/mcp_adapter.py` → `docs/explanations/mcp_adapter.md`
+
+### For every implementation phase
+
+When a phase creates or materially modifies non-test implementation code:
+
+1. Identify all relevant non-test source files created or materially modified during the phase.
+
+2. Create or update the corresponding explanation file in `docs/explanations/`.
+
+3. Each explanation must include:
+
+   #### File Purpose
+   - What the file does.
+   - Why it is needed in the project architecture.
+   - Which components interact with it.
+
+   #### Classes and Data Structures
+   For each important class or data structure:
+   - Its responsibility.
+   - Why it exists.
+   - Its relationship to other components.
+
+   #### Functions and Methods
+   For each important function or method:
+   - Inputs and parameters.
+   - Step-by-step behavior.
+   - Return value.
+   - Why it is needed.
+
+   Only document concepts that are actually relevant to the file.
+
+   #### Execution Flow
+   Explain how data or requests move through the file and into other components.
+
+   #### Architecture and Design Reasoning
+   Explain why the implementation is structured this way and how it supports the CLI-vs-MCP comparison.
+
+4. Do not create explanations for test files unless explicitly requested.
+
+5. Keep explanations tied to the actual implementation. Do not provide generic textbook explanations without connecting them to the project's code.
+
+6. When a later phase changes an existing source file, update its existing explanation file rather than creating duplicate or contradictory documentation.
+
+7. At the end of each implementation phase, record the code explanation files created or updated in `docs/project_progress.md`.
+
+The goal is for the documentation to allow the developer to understand, explain, debug, and modify every important part of the implementation independently.
