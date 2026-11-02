@@ -1,189 +1,220 @@
-"""MCP integration with the central Cognee API via the MCP protocol.
-
-This adapter represents the "MCP integration" path. It communicates with the same
-central Cognee API server that the CLI adapter uses, but through the MCP server's
-tool interface using the ``mcp`` SDK, rather than shelling out to ``cognee-cli``
-or making direct HTTP REST API calls.
-
-Everything MCP-specific lives here: the MCP client setup, the tool calls (``remember``
-and ``recall``), the response parsing, and the error handling. The rest of the
-application sees only :class:`app.memory.base.MemoryAdapter`.
-"""
+"""Persistent MCP client adapter for the Cognee memory server."""
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+import os
+import threading
+from concurrent.futures import Future
 from typing import Any
 
-import httpx
-
-from mcp.client.streamable_http import streamable_http_client
 from mcp import ClientSession, types
+from mcp.client.streamable_http import streamable_http_client
 
-from app.memory.base import MemoryAdapter, MemoryConfigurationError, MemoryOperationError, dataset_for
+from app.memory.base import (
+    MemoryAdapter,
+    MemoryAdapterError,
+    MemoryConfigurationError,
+    MemoryOperationError,
+)
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_API_URL = "http://127.0.0.1:8000"
+DEFAULT_MCP_URL = "http://127.0.0.1:8001/mcp"
 DEFAULT_QUERY_TYPE = "CHUNKS"
 DEFAULT_TOP_K = 10
+DEFAULT_TIMEOUT_SECONDS = 180.0
 
 
-def _run_async(coro):
-    """Bridge async code into the synchronous MemoryAdapter interface.
+class _PersistentMcpSession:
+    """Own an async MCP transport/session on a private event-loop thread."""
 
-    The MemoryAdapter ABC requires _remember and _recall to be synchronous methods,
-    but the MCP SDK is async. This helper runs a coroutine in a fresh event loop.
-    """
-    try:
-        return asyncio.get_event_loop().run_until_complete(coro)
-    except RuntimeError:
-        # No event loop in current thread; use anyio
-        import anyio
+    def __init__(self, url: str, timeout_seconds: float) -> None:
+        self.url = url
+        self.timeout_seconds = timeout_seconds
+        self._loop = asyncio.new_event_loop()
+        self._thread = threading.Thread(target=self._run, name="mcp-session", daemon=True)
+        self._ready = threading.Event()
+        self._startup_error: BaseException | None = None
+        self._stack: contextlib.AsyncExitStack | None = None
+        self._session: ClientSession | None = None
+        self._commands: asyncio.Queue[Any] | None = None
+        self._stopped: Future[None] | None = None
+        self._thread.start()
+        self._ready.wait()
+        if self._startup_error is not None:
+            self.close()
+            raise self._startup_error
 
-        def _run():
-            return asyncio.get_event_loop().run_until_complete(coro)
+    def _run(self) -> None:
+        asyncio.set_event_loop(self._loop)
+        self._loop.create_task(self._serve())
+        self._loop.run_forever()
+        self._loop.close()
 
-        return anyio.run(_run)
+    async def _serve(self) -> None:
+        try:
+            stack = contextlib.AsyncExitStack()
+            await stack.__aenter__()
+            read_stream, write_stream, *_ = await stack.enter_async_context(
+                streamable_http_client(self.url)
+            )
+            session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
+            await session.initialize()
+            tools = await session.list_tools()
+            names = {tool.name for tool in tools.tools}
+            missing = {"remember", "recall"} - names
+            if missing:
+                raise RuntimeError(f"MCP server is missing required tools: {sorted(missing)}")
+            self._stack = stack
+            self._session = session
+            self._commands = asyncio.Queue()
+        except BaseException as exc:
+            self._startup_error = exc
+            self._ready.set()
+            return
+
+        self._ready.set()
+        try:
+            while True:
+                command = await self._commands.get()
+                if command is None:
+                    break
+                name, arguments, result = command
+                try:
+                    value = await self._session.call_tool(name, arguments)
+                except BaseException as exc:
+                    result.set_exception(exc)
+                else:
+                    result.set_result(value)
+        finally:
+            await stack.aclose()
+            self._loop.call_soon(self._loop.stop)
+
+    def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+        if self._session is None or self._commands is None:
+            raise RuntimeError("MCP session is not initialized")
+        result: Future[Any] = Future()
+        self._loop.call_soon_threadsafe(self._commands.put_nowait, (name, arguments, result))
+        return result.result(timeout=self.timeout_seconds)
+
+    def _submit(self, coroutine: Any) -> Any:
+        future: Future[Any] = asyncio.run_coroutine_threadsafe(coroutine, self._loop)
+        return future.result(timeout=self.timeout_seconds)
+
+    def close(self) -> None:
+        if not self._thread.is_alive():
+            return
+        if self._commands is not None:
+            self._loop.call_soon_threadsafe(self._commands.put_nowait, None)
+        else:
+            self._loop.call_soon_threadsafe(self._loop.stop)
+        self._thread.join(timeout=self.timeout_seconds)
 
 
 class McpMemoryAdapter(MemoryAdapter):
-    """Store and retrieve memory by calling the Cognee MCP server's tools.
-
-    The MCP server runs alongside the Cognee API and forwards tool calls (``remember``
-    and ``recall``) over HTTP to the same backend as the CLI path. Both integrations
-    read and write the exact same knowledge graph, so the only difference is the
-    integration mechanism (MCP tool call vs CLI subprocess).
-
-    The adapter uses the ``mcp`` SDK's ``streamable_http_client`` and ``ClientSession``
-    to communicate with the MCP server via the MCP protocol. The ``api_url`` defaults
-    to ``http://127.0.0.1:8000``, which is the Cognee API server. The MCP server
-    typically runs on ``http://127.0.0.1:8001/mcp`` and proxies tool calls to the
-    same backend.
-    """
+    """Use one MCP protocol session for all memory operations on this adapter."""
 
     integration = "mcp"
 
     def __init__(
         self,
         *,
-        api_url: str | None = None,
+        mcp_url: str | None = None,
         recall_query_type: str | None = None,
         top_k: int | None = None,
         timeout_seconds: float | None = None,
     ) -> None:
-        self.api_url = (api_url or "http://127.0.0.1:8000").rstrip("/")
-        self.recall_query_type = recall_query_type or DEFAULT_QUERY_TYPE
+        self.mcp_url = (mcp_url or os.getenv("COGNEE_MCP_URL") or DEFAULT_MCP_URL).rstrip("/")
+        self.recall_query_type = recall_query_type or os.getenv(
+            "COGNEE_RECALL_QUERY_TYPE", DEFAULT_QUERY_TYPE
+        )
         self.top_k = top_k or DEFAULT_TOP_K
-        self.timeout_seconds = timeout_seconds or 180.0
+        self.timeout_seconds = timeout_seconds or DEFAULT_TIMEOUT_SECONDS
+        self._connection: _PersistentMcpSession | None = None
+        self._closed = False
 
-    # -- integration hooks -------------------------------------------------
+    def _get_connection(self) -> _PersistentMcpSession:
+        if self._closed:
+            raise MemoryConfigurationError(
+                "MCP adapter is closed", integration=self.integration, operation="configure"
+            )
+        if self._connection is None:
+            try:
+                self._connection = _PersistentMcpSession(self.mcp_url, self.timeout_seconds)
+            except Exception as exc:
+                raise MemoryOperationError(
+                    f"MCP session initialization failed: {exc}",
+                    integration=self.integration,
+                    operation="initialize",
+                ) from exc
+        return self._connection
 
     def _remember(self, customer_id: str, facts: tuple[str, ...], dataset: str) -> int:
-        """Add every fact to ``dataset`` via the Cognee MCP server (MCP path).
-
-        Each fact is sent as a ``remember`` tool call via the MCP protocol.
-        The MCP server proxies the calls to the Cognee API, which stores the facts
-        in the same knowledge graph that the CLI path uses.
-
-        Returns the number of facts stored, as expected by the base class interface.
-        """
-        total_stored = 0
-        for i, fact in enumerate(facts):
-            remember_args = {
-                "data": fact,
+        result = self._call(
+            "remember",
+            {
+                "data": "\n".join(facts),
                 "dataset_name": dataset,
-            }
-            stored = _remember_single(remember_args)
-            total_stored += stored
-        return total_stored
+                "background": False,
+                "self_improvement": True,
+            },
+            customer_id,
+        )
+        return len(_text_from_result(result))
 
     def _recall(self, customer_id: str, query: str, dataset: str) -> tuple[str, ...]:
-        """Return stored memory matching ``query`` from ``dataset`` via the MCP protocol.
+        result = self._call(
+            "recall",
+            {
+                "query": query,
+                "datasets": dataset,
+                "search_type": self.recall_query_type,
+                "top_k": self.top_k,
+            },
+            customer_id,
+        )
+        return _fragments_from_result(result)
 
-        Uses ``search_type="CHUNKS"`` and ``top_k=10`` to match the CLI adapter's
-        retrieval settings, ensuring fair comparison of latency and result format.
-        """
-        recall_args = {
-            "query": query,
-            "search_type": "CHUNKS",
-            "top_k": 10,
-            "datasets": [dataset],
-        }
-        return _recall_single(recall_args)
+    def _call(self, name: str, arguments: dict[str, Any], customer_id: str) -> Any:
+        try:
+            return self._get_connection().call_tool(name, arguments)
+        except MemoryAdapterError:
+            raise
+        except Exception as exc:
+            raise MemoryOperationError(
+                f"MCP {name} tool call failed: {exc}",
+                integration=self.integration,
+                operation=name,
+                customer_id=customer_id,
+            ) from exc
 
-
-def _remember_single(arguments: dict[str, Any]) -> int:
-    """Execute a single ``remember`` tool call via the MCP protocol.
-
-    Returns the number of items stored (typically 1 per call).
-    """
-    api_url = arguments.get("dataset_name", "http://127.0.0.1:8001/mcp")
-
-    async def _remember_coro() -> int:
-        async with streamable_http_client(api_url) as streams:
-            read_stream, write_stream = streams
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                result = await session.call_tool("remember", arguments)
-                # Parse TextContent responses
-                items_stored = 0
-                for content in result.content:
-                    if isinstance(content, types.TextContent):
-                        text = content.text or ""
-                        if "Background process" in text:
-                            # Background mode returns immediately; count as 1
-                            items_stored += 1
-                        elif "Stored" in text:
-                            items_stored += 1
-                return items_stored
-
-    return _run_async(_remember_coro())
+    def close(self) -> None:
+        connection, self._connection = self._connection, None
+        self._closed = True
+        if connection is not None:
+            connection.close()
 
 
-def _recall_single(arguments: dict[str, Any]) -> tuple[str, ...]:
-    """Execute a single ``recall`` tool call via the MCP protocol.
+def _text_from_result(result: Any) -> str:
+    return "\n".join(
+        content.text
+        for content in getattr(result, "content", ())
+        if isinstance(content, types.TextContent) and content.text
+    )
 
-    Returns a tuple of memory fragments (stripped, non-empty).
-    """
-    api_url = arguments.get("datasets", ["http://127.0.0.1:8001/mcp"])[0]
 
-    async def _recall_coro() -> tuple[str, ...]:
-        async with streamable_http_client(api_url) as streams:
-            read_stream, write_stream = streams
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                result = await session.call_tool("recall", arguments)
-                # Parse TextContent responses, dropping system markers
-                fragments: list[str] = []
-                for content in result.content:
-                    if isinstance(content, types.TextContent):
-                        text = content.text or ""
-                        # Drop system marker lines (same logic as CLI adapter)
-                        # System markers typically appear as lines like:
-                        # "Memory is still warming up" or Cognee build artifacts
-                        for line in text.split("\n"):
-                            stripped = line.strip()
-                            if not stripped:
-                                continue
-                            # Heuristic: drop lines that look like system messages
-                            # (not customer preferences)
-                            if stripped.startswith("Memory is still") or stripped.startswith(
-                                "Cognee"
-                            ) or stripped.startswith("knowledge graph"):
-                                continue
-                            # Also drop empty or very short lines that are likely markers
-                            if len(stripped) < 3:
-                                continue
-                            fragments.append(stripped)
-                # Remove duplicates while preserving order
-                seen = set()
-                unique_fragments = []
-                for f in fragments:
-                    if f not in seen:
-                        seen.add(f)
-                        unique_fragments.append(f)
-                return tuple(unique_fragments)
+def _fragments_from_result(result: Any) -> tuple[str, ...]:
+    fragments: list[str] = []
+    for line in _text_from_result(result).splitlines():
+        text = line.strip()
+        if text and not _is_system_marker(text):
+            fragments.append(text)
+    return tuple(dict.fromkeys(fragments))
 
-    return _run_async(_recall_coro())
+
+def _is_system_marker(text: str) -> bool:
+    lowered = text.lower()
+    return lowered.startswith(("memory is still", "cognee", "knowledge graph"))

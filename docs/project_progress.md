@@ -118,7 +118,7 @@ the MCP path will use, without letting CLI details leak into the agent.
 
 ---
 
-## Phase 5 — MCP Cognee adapter
+## Phase 5 — MCP Cognee adapter (corrected)
 
 **Goal.** Implement the MCP integration so it satisfies the common memory
 interface in `app/memory/base.py` and communicates with the same central Cognee
@@ -126,53 +126,53 @@ API server the CLI path uses, through the MCP server's tool interface.
 
 **Implementation summary**
 
-- `McpMemoryAdapter` (integration id `mcp`) implements only the two protected
-  hooks `_remember` and `_recall`. Validation, timing, dataset naming, logging and
-  result construction stay in the base class.
-- Both operations delegate to the MCP server's tool interface, which forwards
-  requests over HTTP to the same Cognee API backend used by the CLI path. No
-  second engine or local database is created.
-- Recall responses are parsed from the JSON payload. `system` entries (Cognee
-  markers such as "memory still warming up") are dropped from fragments and
-  logged, so a marker-only response is reported as an empty recall rather than
-  as retrieved memory.
-- Subprocess failures, non-zero exits and timeouts raise `MemoryOperationError`
-  with `integration`/`operation`/`customer_id` attached and the original
-  exception chained; the message carries the MCP tool's own error information.
+- The previous REST implementation was removed. The adapter now uses
+  `streamable_http_client` and `ClientSession` from the MCP SDK against the
+  dedicated `COGNEE_MCP_URL` endpoint (default `http://127.0.0.1:8001/mcp`).
+- A private event-loop thread owns one transport and one session. The session is
+  initialized lazily, performs MCP handshake and tool discovery once, and is
+  reused for every subsequent operation on the adapter.
+- The actual server schemas are used: one `remember` call sends the complete fact
+  list as `data`; `recall` sends `query`, dataset, `search_type=CHUNKS`, and
+  `top_k=10`.
+- MCP text results are normalized and system marker lines are excluded. Tool and
+  initialization failures become chained `MemoryOperationError` instances.
+- `close()` exits the MCP context stack and stops the event-loop thread; the
+  existing `MemoryAdapter` context manager therefore releases the persistent
+  connection correctly.
 
 **Files changed**
 
 | File | Change |
 |---|---|
-| `app/memory/mcp_adapter.py` | Implemented the adapter (was empty) |
-| `tests/test_mcp_adapter.py` | New; unit tests with mocked `httpx.Client` |
+| `app/memory/mcp_adapter.py` | Replaced REST calls with persistent MCP client/session |
+| `tests/test_mcp_adapter.py` | Replaced HTTP mocks with MCP session/lifecycle tests |
 | `docs/project_progress.md` | Updated with Phase 5 entry |
-| `docs/decisions.md` | Updated with D4 decision documentation |
+| `docs/explanations/mcp_adapter.md` | Updated for persistent MCP architecture |
+| `docs/decisions.md` | Added persistent lifecycle and cold/warm decisions |
 
 `app/memory/base.py`, `tests/test_memory.py` are unchanged from Phase 3.
 `app/memory/cli_adapter.py`, `scripts/`, `data/`, `results/` were not touched.
 
-**Tests and verification**
+**Verification**
 
-- `uv run python -m pytest -q` → **27 passed** (15 interface contract tests +
-  12 CLI adapter tests, and MCP adapter tests once written). No service
-  required for unit tests.
-- MCP adapter verified live against the running Cognee API server (same
-  `http://127.0.0.1:8000` used by the CLI path):
-  - `remember` with 3 facts → `fact_count=3`, latency ~2591 ms
-  - `recall` with `CHUNKS` query → 3–5 fragments, latency ~63 ms
-  - Both paths use the exact same API server (`/api/v1/remember` and
-    `/api/v1/recall`), so the comparison isolates integration overhead.
-- Failure paths: `httpx.TimeoutException` and `httpx.HTTPError` are wrapped
-  into `MemoryOperationError` with the same attribute structure as the CLI
-  adapter, making error visibility directly comparable.
+- Unit tests cover endpoint configuration, handshake/tool discovery through the
+  session owner, argument mapping, session reuse, shutdown, context-manager
+  cleanup, error wrapping, and exception chaining.
+- Live verification completed with Cognee API on `:8000` and the local MCP
+  server on `:8001/mcp`, using dedicated dataset `retail_smoke_phase5_lifecycle2`:
+  MCP handshake and tool discovery succeeded; one `remember` and two `recall`
+  calls succeeded; the adapter reported the same connection object for both
+  recalls and shutdown joined the session thread cleanly. Benchmark datasets
+  were not used.
 
 **Actual MCP/API configuration used**
 
 | Setting | Value |
 |---|---|
 | Cognee version | 1.6.6 (`cognee[gliner]` from `uv.lock`) |
-| API server | `http://127.0.0.1:8000` (`/` → `200`) |
+| MCP endpoint | `http://127.0.0.1:8001/mcp` via `COGNEE_MCP_URL` |
+| API server | `http://127.0.0.1:8000` behind the MCP server |
 | Recall mode | pinned `CHUNKS` (`COGNEE_RECALL_QUERY_TYPE`) |
 | `top_k` | 10 |
 | HTTP timeout | 180 s |
@@ -188,9 +188,9 @@ API server the CLI path uses, through the MCP server's tool interface.
    isolate. Both paths are affected equally, so the comparison stays fair, but
    interpretation of benchmark results must treat per-customer isolation as an
    out-of-scope limitation (see `docs/decisions.md` D4).
-2. **HTTP transport overhead.** The MCP path pays HTTP request overhead in
-   addition to backend work, while the CLI pays process-spawn overhead. Both
-   are genuine integration costs and are captured in the `latency_ms` metric.
+2. **Transport overhead.** MCP pays streamable-HTTP framing and one initial
+   handshake, while CLI pays process startup per operation. Both are genuine
+   integration costs; cold initialization remains separate from warm calls.
 
 **What Phase 6 depends on**
 

@@ -91,3 +91,27 @@ overhead being measured.
 **Decision.** Such entries are logged and excluded from fragments, so a
 marker-only response is reported as `result_count=0` rather than as a successful
 retrieval of text that is not customer memory. Phase 5 must mirror this.
+
+## D6 — MCP uses one persistent client session (corrected Phase 5)
+
+**Context.** The first Phase 5 implementation used direct Cognee REST calls and
+created a new connection for each operation. That did not represent an MCP
+integration or a realistic long-lived agent.
+
+**Decision.** `McpMemoryAdapter` connects to `COGNEE_MCP_URL` using the MCP
+SDK's streamable-HTTP transport and `ClientSession`. A private event-loop thread
+owns the async context stack, performs handshake and tool discovery once, and
+serves synchronous adapter calls through `run_coroutine_threadsafe`. `close()`
+closes the stack and stops the loop.
+
+**Fairness.** The adapter sends one combined fact payload and uses the same
+`CHUNKS`/`top_k=10` retrieval settings as the CLI path. No REST endpoint is
+called by application code.
+
+## D7 — Cold start is separate from warm MCP operations
+
+**Decision.** Adapter initialization/handshake/tool discovery is a cold-start
+cost. Subsequent MCP calls reuse the same session and are warm operations. The
+CLI retains its natural subprocess-per-operation behavior. Benchmark summaries
+must not average MCP cold-start time into warm operation latency; this is an
+intentional integration trade-off rather than an artificial normalization.
