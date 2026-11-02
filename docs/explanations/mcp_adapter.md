@@ -163,7 +163,8 @@ but does not connect until the first memory operation.
 
 Returns the existing `_PersistentMcpSession`, or creates it once on the first
 operation. A closed adapter raises `MemoryConfigurationError`. Initialization
-failures are wrapped as `MemoryOperationError(operation="initialize")` with the
+failures, including the MCP SDK's `CancelledError` when a connection attempt is
+aborted, are wrapped as `MemoryOperationError(operation="initialize")` with the
 original cause chained.
 
 ### `McpMemoryAdapter._remember(customer_id, facts, dataset) -> int`

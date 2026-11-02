@@ -1,5 +1,6 @@
 """Unit tests for the genuine, persistent MCP adapter."""
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -92,3 +93,14 @@ def test_session_initialization_failure_is_wrapped():
 
     assert excinfo.value.operation == "initialize"
     assert excinfo.value.__cause__ is cause
+
+
+def test_cancelled_session_initialization_is_wrapped():
+    with patch(
+        "app.memory.mcp_adapter._PersistentMcpSession",
+        side_effect=asyncio.CancelledError(),
+    ), pytest.raises(MemoryOperationError) as excinfo:
+        McpMemoryAdapter().recall("customer_001", "query")
+
+    assert excinfo.value.operation == "initialize"
+    assert isinstance(excinfo.value.__cause__, asyncio.CancelledError)

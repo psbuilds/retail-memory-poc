@@ -202,6 +202,51 @@ API server the CLI path uses, through the MCP server's tool interface.
 
 ---
 
-## Phase 6 — End-to-End Agent Benchmark
+## Phase 6 — Independent Integration Verification
+
+**Goal.** Verify the completed CLI and genuine MCP adapters independently through
+the same public `MemoryAdapter` interface before introducing chatbot logic or the
+full benchmark.
+
+**Verification scope**
+
+- Used identical customer id, two facts, and two recall queries for both paths.
+- Used the same Cognee API backend at `http://127.0.0.1:8000`.
+- Used the shared `dataset_for()` naming convention, `CHUNKS`, and `top_k=10`.
+- Confirmed `RememberResult` and `RecallResult` fields, integration labels,
+  dataset names, fact/result counts, and response text.
+- Exercised a dead API port for both adapters and confirmed failures remain in
+  the `MemoryAdapterError` hierarchy with operation/customer metadata and a
+  chained original cause.
+- For MCP, one adapter performed one remember and two recalls; the same
+  persistent session/connection object was reused and `close()` shut down its
+  event-loop thread cleanly.
+
+**Live verification**
+
+The live checks used the dedicated dataset `retail_phase6_verification` and did
+not modify the committed benchmark data. Both adapters successfully stored the
+same facts and returned successful recalls for the same queries. The CLI paid
+its natural subprocess cost on each operation; MCP paid its initial handshake
+and tool-discovery cost once, then reused the streamable HTTP session for warm
+operations. MCP returned the server's text result format, while CLI returned
+parsed CLI JSON fragments; both were normalized into the common result types.
+
+**Tests and files**
+
+- `uv run python -m pytest -q` → **32 passed**.
+- `app/memory/mcp_adapter.py` received a focused error-boundary correction so
+  cancelled MCP handshakes are reported through the common
+  `MemoryOperationError` hierarchy; its explanation was updated accordingly.
+- `docs/project_progress.md` was updated with this Phase 6 entry.
+- No new engineering decision was required; existing D1, D3, D4, D5, D6, and
+  D7 decisions cover the verified behavior.
+
+**Not started.** The retail chatbot, Phase 9 benchmark, and Phase 7 product/
+recommendation work remain out of scope for this phase.
+
+---
+
+## Future phases
 
 [same structure as Phase 4 and Phase 5 entries]

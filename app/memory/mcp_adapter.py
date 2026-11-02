@@ -144,6 +144,12 @@ class McpMemoryAdapter(MemoryAdapter):
         if self._connection is None:
             try:
                 self._connection = _PersistentMcpSession(self.mcp_url, self.timeout_seconds)
+            except asyncio.CancelledError as exc:
+                raise MemoryOperationError(
+                    f"MCP session initialization was cancelled: {exc}",
+                    integration=self.integration,
+                    operation="initialize",
+                ) from exc
             except Exception as exc:
                 raise MemoryOperationError(
                     f"MCP session initialization failed: {exc}",
