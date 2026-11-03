@@ -247,6 +247,143 @@ recommendation work remain out of scope for this phase.
 
 ---
 
+## Phase 7 — Product Catalog and Deterministic Recommendation Logic
+
+**Goal.** Provide a validated, deterministic product catalog and structured
+preference recommendation layer independent of memory integrations and the
+future chatbot.
+
+**Audit findings corrected**
+
+- The audit found that the catalog had incorrectly been replaced by 18
+  headphone-only products, changing the meaning of existing scenario IDs.
+- It also found missing category, noise-cancellation, and negative-preference
+  constraints, incomplete numeric validation, and no cross-file validation.
+
+**Completed work**
+
+- Restored the exact 19 historical product identities, IDs, names, categories,
+  prices, and feature meanings from Git commit `6642c87`, then added deterministic
+  plausible brands, ratings, wireless, and noise-cancellation fields.
+- Preserved all four categories: 7 headphones, 5 footwear, 5 apparel, and 2
+  bags. Mandatory identities such as p008 running shoes, p010 everyday sneakers,
+  p013 cotton T-shirt, p014/p016 merino apparel, and p005 ANC headphones remain.
+- Implemented immutable `Product` records and strict validation, including
+  duplicate IDs, required fields, booleans, non-empty features, finite positive
+  prices, and finite 0–5 ratings.
+- Extended structured preferences with category, noise cancellation, excluded
+  features, and excluded product IDs. Hard filters run before deterministic
+  rating/price/ID ranking, with no fallback products.
+- Added cross-file tests for all 10 scenarios, category semantics, expected and
+  excluded product references, and original product meanings.
+- Added edge-case tests for boundaries, exclusions, ties/order, invalid values,
+  repeated deterministic calls, and input immutability.
+
+**Verification**
+
+- Focused product and cross-file tests were run after implementation.
+- The full project suite, diff check, and final diff inspection are required
+  before the Phase 7 approval report.
+
+**Limitations**
+
+- Brands and ratings for the historical records were not present in the Phase 2
+  JSON and are deterministic plausible extensions, not sourced facts.
+- Natural-language preference extraction remains Phase 8 work.
+- Scenario expected/excluded IDs remain the original ground truth; some scenarios
+  express steering behavior rather than a direct exact-feature match.
+
+**Files changed**
+
+- `app/products.py`
+- `data/products.json`
+- `tests/test_products.py`
+- `docs/explanations/products.md`
+- `docs/project_progress.md`
+
+**Phase 7 status:** pending final verification; Phase 8 chatbot work and the
+final benchmark remain out of scope.
+
+---
+
 ## Future phases
 
-[same structure as Phase 4 and Phase 5 entries]
+Phase 8 will build the chatbot on this shared recommendation engine. Phase 9
+will run the two-level benchmark.
+
+---
+
+## Phase 8 — Deterministic Retail Chatbot
+
+**Completed work**
+
+- Added dependency-injected `RetailChatbot` using only the common
+  `MemoryAdapter` interface and shared product recommendation engine.
+- Added exactly-once remember and recall flows with explicit memory failure,
+  invalid input, empty recall, success, and no-recommendation statuses.
+- Added deterministic extraction for categories, budgets, brands, wireless/wired,
+  ANC, positive features, and negative feature exclusions.
+- Current query scalar constraints override conflicting memory; relevant memory
+  enriches unspecified query preferences, while unrelated category memory is
+  ignored.
+- Added structured response dataclasses exposing recalled memories, preferences,
+  recommendation IDs, adapter recall latency, extraction latency,
+  recommendation latency, and total latency.
+
+**Files changed**
+
+- `app/chatbot.py`
+- `tests/test_chatbot.py`
+- `docs/explanations/chatbot.md`
+- `docs/project_progress.md`
+
+**Verification**
+
+- Focused chatbot tests and the full project suite were run after implementation.
+- No benchmark framework, CSV logging, chatbot orchestration changes, or adapter
+  changes were made.
+
+**Limitations**
+
+- Preference extraction is intentionally keyword/regex based and supports only
+  attributes represented by the current catalog and structured preference model.
+- Memory relevance filtering is deterministic lexical filtering, not semantic
+  retrieval; the underlying adapter remains responsible for retrieval.
+- Phase 9 benchmark execution remains out of scope.
+
+---
+
+## Phase 8 — Targeted Corrective Fixes
+
+**Corrections**
+
+- Fixed negated wireless and ANC extraction, including `don't want wired` and
+  `don't need ANC` forms.
+- Preserved the last explicit mutually exclusive scalar constraint in a query.
+- Resolved query-versus-memory feature and exclusion conflicts in favor of the
+  current query.
+- Added category-aware applicability filtering so generic memory attributes do
+  not constrain incompatible categories.
+- Avoided arbitrary category selection when retrieved memories contain multiple
+  category signals.
+- Converted recommendation `ValueError`/`TypeError` failures into structured
+  `recommendation_failure` responses.
+- Added regression coverage for negation, precedence, generic memory relevance,
+  and recommendation failure.
+
+**Verification**
+
+- Focused chatbot tests: **11 passed**.
+- Full project suite: **58 passed**.
+- `git diff --check`: passed.
+
+Only the allowed Phase 8 files were modified by this corrective task. Existing
+uncommitted Phase 7 files remain visible in Git status but were not changed.
+
+**Remaining limitations**
+
+- The existing evaluation plan still uses some legacy status/schema wording and
+  was intentionally not modified under the restricted file scope.
+- Preference extraction remains deterministic keyword/regex logic rather than
+  semantic language understanding.
+- Phase 9 benchmark work remains out of scope.
