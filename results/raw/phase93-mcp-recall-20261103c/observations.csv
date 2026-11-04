@@ -1,0 +1,11 @@
+run_id,timestamp_utc,adapter,experiment_group,operation,scenario_id,customer_id,repetition,execution_order,cold_or_warm,latency_ms,adapter_latency_ms,status,returned_count,relevance_score,recommendation_match,expected_product_coverage,excluded_product_violations,error_type,error_message,response_json
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.229873+00:00,mcp,memory_recall,recall,scenario_01,customer_001,0,0,cold,57.23129102261737,57.08645796403289,success,11,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.275904+00:00,mcp,memory_recall,recall,scenario_02,customer_002,0,1,warm,45.8935410133563,45.87529203854501,success,16,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.323724+00:00,mcp,memory_recall,recall,scenario_03,customer_001,0,2,warm,47.81024996191263,47.7880000253208,success,24,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.372373+00:00,mcp,memory_recall,recall,scenario_04,customer_003,0,3,warm,48.6317920149304,48.61212498508394,success,20,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.419685+00:00,mcp,memory_recall,recall,scenario_05,customer_002,0,4,warm,47.29912499897182,47.28154098847881,success,12,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.468823+00:00,mcp,memory_recall,recall,scenario_06,customer_004,0,5,warm,49.125082965474576,49.107792030554265,success,17,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.516908+00:00,mcp,memory_recall,recall,scenario_07,customer_004,0,6,warm,48.07183297816664,48.055750026833266,success,17,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.572409+00:00,mcp,memory_recall,recall,scenario_08,customer_005,0,7,warm,55.49170897575095,55.47208397183567,success,24,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.620525+00:00,mcp,memory_recall,recall,scenario_09,customer_005,0,8,warm,48.100708052515984,48.08279202552512,success,18,1.0,,,,,,
+phase93-mcp-recall-20261103c,2026-11-03T16:39:52.668453+00:00,mcp,memory_recall,recall,scenario_10,customer_003,0,9,warm,47.91570804081857,47.89983399678022,success,16,1.0,,,,,,

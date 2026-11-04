@@ -1,0 +1,16 @@
+{
+  "no_memory:e2e_no_memory": {
+    "runs": 10,
+    "mean_ms": 0.2236332045868039,
+    "median_ms": 0.11577052646316588,
+    "stdev_ms": 0.2526050721144433,
+    "min_ms": 0.10166701395064592,
+    "max_ms": 0.8762080105952919,
+    "p95_ms": 0.6843766052043069,
+    "total_operations": 10,
+    "successful_operations": 10,
+    "failed_operations": 0,
+    "success_rate": 1.0,
+    "failure_rate": 0.0
+  }
+}

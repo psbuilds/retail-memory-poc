@@ -1,0 +1,16 @@
+{
+  "cli:memory_recall": {
+    "runs": 10,
+    "mean_ms": 8091.192725097062,
+    "median_ms": 8041.288833512226,
+    "stdev_ms": 198.2419821390978,
+    "min_ms": 7973.519084043801,
+    "max_ms": 8644.17412498733,
+    "p95_ms": 8393.951849982841,
+    "total_operations": 14,
+    "successful_operations": 10,
+    "failed_operations": 4,
+    "success_rate": 0.7142857142857143,
+    "failure_rate": 0.2857142857142857
+  }
+}

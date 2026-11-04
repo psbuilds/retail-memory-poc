@@ -1,0 +1,16 @@
+{
+  "cli:memory_write": {
+    "runs": 5,
+    "mean_ms": 9394.770099781454,
+    "median_ms": 8708.948999992572,
+    "stdev_ms": 2390.3292390149218,
+    "min_ms": 7580.698249978013,
+    "max_ms": 13509.126792021561,
+    "p95_ms": 12656.133916811086,
+    "total_operations": 5,
+    "successful_operations": 5,
+    "failed_operations": 0,
+    "success_rate": 1.0,
+    "failure_rate": 0.0
+  }
+}

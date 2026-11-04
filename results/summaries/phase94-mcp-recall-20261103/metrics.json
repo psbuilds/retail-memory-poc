@@ -1,0 +1,16 @@
+{
+  "mcp:memory_recall": {
+    "runs": 10,
+    "mean_ms": 58.8964540977031,
+    "median_ms": 57.13550001382828,
+    "stdev_ms": 6.557915767330409,
+    "min_ms": 50.73662498034537,
+    "max_ms": 67.33012496260926,
+    "p95_ms": 66.87238092708867,
+    "total_operations": 10,
+    "successful_operations": 10,
+    "failed_operations": 0,
+    "success_rate": 1.0,
+    "failure_rate": 0.0
+  }
+}

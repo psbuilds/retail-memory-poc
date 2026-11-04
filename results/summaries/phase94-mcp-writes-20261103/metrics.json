@@ -1,0 +1,16 @@
+{
+  "mcp:memory_write": {
+    "runs": 5,
+    "mean_ms": 1968.1212831987068,
+    "median_ms": 1886.8784999940544,
+    "stdev_ms": 233.34904380602185,
+    "min_ms": 1791.43149999436,
+    "max_ms": 2377.9162500286475,
+    "p95_ms": 2284.0096166240983,
+    "total_operations": 5,
+    "successful_operations": 5,
+    "failed_operations": 0,
+    "success_rate": 1.0,
+    "failure_rate": 0.0
+  }
+}

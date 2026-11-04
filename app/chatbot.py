@@ -29,6 +29,27 @@ _CATEGORY_FEATURES = {
     "bags": {"packable", "lightweight", "travel-friendly", "leather", "heavy", "bulky", "professional"},
 }
 _BRANDS = ("SoundGo", "Auralite", "MetroBeat", "Bassline", "EchoPeak", "Northstar", "VelvetSound", "StridePro", "TrailPeak", "CottonWay", "WoolTrail", "ActiveFlex", "CarryLite")
+_CORRECTIONS = ("but", "actually", "instead", "rather", "however")
+
+
+@dataclass(frozen=True, slots=True)
+class PreferenceMention:
+    """An internal, position-aware interpretation of one preference phrase."""
+
+    attribute: str
+    value: Any
+    start: int
+    end: int
+    polarity: str
+    strength: str
+
+
+_FEATURE_ALIASES = {
+    "noise cancellation": "noise-cancelling",
+    "noise cancelling": "noise-cancelling",
+    "active noise cancellation": "noise-cancelling",
+    "bluetooth": "wireless",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,44 +129,96 @@ class RetailChatbot:
 
 
 def extract_preferences(text: str) -> dict[str, Any]:
-    """Extract only explicit, supported structured preferences from text."""
+    """Extract supported hard preferences with local, position-aware polarity."""
     if not isinstance(text, str):
         raise ValueError("text must be a string")
     lowered = text.casefold()
     result: dict[str, Any] = {}
+    mentions: list[PreferenceMention] = []
     for category, terms in _CATEGORY_TERMS.items():
-        if any(re.search(rf"\b{re.escape(term)}\b", lowered) for term in terms):
-            result["category"] = category
-            break
+        for term in terms:
+            match = re.search(rf"\b{re.escape(term)}\b", lowered)
+            if match:
+                mentions.append(PreferenceMention("category", category, match.start(), match.end(), "positive", "hard"))
     budget = re.search(r"(?:under|below|within|up to|max(?:imum)?|budget(?: is)?(?: up to)?)\s*[₹$]?\s*([\d,]+)", lowered)
     if budget:
-        result["max_budget"] = int(budget.group(1).replace(",", ""))
-    wireless_mentions = list(re.finditer(r"(?:\b(?:not|no|avoid|without|don't|dont)\s+(?:want\s+)?(?:wireless|wired)|\b(?:wireless|wired)\b)", lowered))
-    if wireless_mentions:
-        mention = wireless_mentions[-1]
-        result["wireless"] = "wireless" in mention.group() and not re.search(r"(?:not|no|avoid|without|don't|dont)", mention.group())
-        if "wired" in mention.group() and re.search(r"(?:not|no|avoid|without|don't|dont)", mention.group()):
-            result["wireless"] = True
-    anc_mentions = list(re.finditer(r"(?:\b(?:not|no|avoid|without|don't|dont)\s+(?:need\s+)?(?:anc|noise\s+cancellation)|\b(?:anc|active noise cancellation|noise[- ]cancell(?:ing|ation))\b)", lowered))
-    if anc_mentions:
-        mention = anc_mentions[-1].group()
-        result["noise_cancellation"] = not bool(re.search(r"(?:not|no|avoid|without|don't|dont)", mention))
+        mentions.append(PreferenceMention("max_budget", int(budget.group(1).replace(",", "")), budget.start(), budget.end(), "positive", "hard"))
+    for match in re.finditer(r"\b(wireless|wired|bluetooth)\b", lowered):
+        alias = match.group(1)
+        value = alias != "wired"
+        polarity, strength = _polarity(lowered, match.start(), match.end())
+        if polarity == "negative": value = not value
+        if polarity != "neutral" and strength != "soft":
+            mentions.append(PreferenceMention("wireless", value, match.start(), match.end(), polarity, strength))
+    for match in re.finditer(r"\b(anc|active noise cancellation|noise cancellation|noise cancelling)\b", lowered):
+        polarity, strength = _polarity(lowered, match.start(), match.end())
+        if polarity != "neutral" and strength != "soft":
+            mentions.append(PreferenceMention("noise_cancellation", polarity != "negative", match.start(), match.end(), polarity, strength))
     for brand in _BRANDS:
         if brand.casefold() in lowered:
-            result["preferred_brand"] = brand
-            break
-    positive: list[str] = []
-    excluded: list[str] = []
+            mentions.append(PreferenceMention("preferred_brand", brand, lowered.index(brand.casefold()), lowered.index(brand.casefold()) + len(brand), "positive", "hard"))
+
     for feature in _FEATURES:
-        if feature in lowered:
-            negative = bool(re.search(rf"(?:no|not|don't|dont|avoid|avoids|dislike|dislikes|without)\s+(?:\w+\s+){{0,2}}{re.escape(feature)}", lowered))
-            (excluded if negative else positive).append(feature)
-    positive = [f for f in positive if f not in excluded]
-    if positive:
-        result["required_features"] = tuple(dict.fromkeys(positive))
-    if excluded:
-        result["excluded_features"] = tuple(dict.fromkeys(excluded))
+        for match in re.finditer(rf"\b{re.escape(feature)}\b", lowered):
+            polarity, strength = _polarity(lowered, match.start(), match.end())
+            if polarity != "neutral" or strength == "soft":
+                mentions.append(PreferenceMention("feature", feature, match.start(), match.end(), polarity, strength))
+    if re.search(r"\balthough\b.*\b(?:can do without|without it)\b", lowered):
+        mentions = [mention for mention in mentions if mention.attribute != "noise_cancellation"]
+    mentions.sort(key=lambda mention: (mention.end, mention.start))
+    for mention in mentions:
+        if mention.attribute == "category": result["category"] = mention.value
+        elif mention.attribute == "max_budget": result["max_budget"] = mention.value
+        elif mention.attribute == "preferred_brand": result["preferred_brand"] = mention.value
+        elif mention.attribute == "wireless": result["wireless"] = mention.value
+        elif mention.attribute == "noise_cancellation": result["noise_cancellation"] = mention.value
+        elif mention.attribute == "feature":
+            required = list(result.get("required_features", ()))
+            excluded = list(result.get("excluded_features", ()))
+            if mention.polarity == "neutral":
+                required = [value for value in required if value != mention.value]
+                excluded = [value for value in excluded if value != mention.value]
+            elif mention.polarity == "negative":
+                required = [value for value in required if value != mention.value]
+                if mention.value not in excluded: excluded.append(mention.value)
+            else:
+                excluded = [value for value in excluded if value != mention.value]
+                if mention.value not in required: required.append(mention.value)
+            if required: result["required_features"] = tuple(required)
+            else: result.pop("required_features", None)
+            if excluded: result["excluded_features"] = tuple(excluded)
+            else: result.pop("excluded_features", None)
+    if result.get("wireless") is True:
+        result["excluded_features"] = tuple(value for value in result.get("excluded_features", ()) if value != "wireless")
+    elif result.get("wireless") is False:
+        result["required_features"] = tuple(value for value in result.get("required_features", ()) if value != "wireless")
+        result["excluded_features"] = tuple(dict.fromkeys((*result.get("excluded_features", ()), "wireless")))
+    if not result.get("required_features"): result.pop("required_features", None)
+    if not result.get("excluded_features"): result.pop("excluded_features", None)
     return result
+
+
+def _polarity(text: str, start: int, end: int) -> tuple[str, str]:
+    """Interpret the short clause immediately before a mention."""
+    clause_start = max(text.rfind(marker, 0, start) for marker in (".", ",", ";", " but ", " actually ", " instead ", " however ")) + 1
+    prefix = text[clause_start:start].strip()
+    clause_end = len(text)
+    for marker in (".", ",", ";", " but ", " actually ", " instead ", " however ", " although "):
+        position = text.find(marker, end)
+        if position >= 0: clause_end = min(clause_end, position)
+    suffix = text[end:clause_end].strip()
+    context = f"{prefix} {suffix}".strip()
+    if re.search(r"\b(?:don't|dont)\s+dislike\b", context):
+        return "positive", "soft"
+    if re.search(r"\b(?:acceptable|optional|don't mind|not important|not a priority|fine|fine with|can do without|without it)\b", context):
+        return "neutral", "soft"
+    if re.search(r"\b(?:not|avoid|avoids|without|unnecessary|not looking for|not want|do not want|don't want|dont want|would rather avoid|not need|don't need|dont need|dislike|dislikes|not a priority)\b", context):
+        return "negative", "hard"
+    if re.search(r"\b(?:actually|instead|rather)\b", prefix):
+        return "positive", "hard"
+    if re.search(r"\b(?:must have|require|requires|need|needs|want|wants|with|prefer|preferred)\b", context):
+        return "positive", "hard" if re.search(r"\b(?:must|required|need|needs|want|wants|with)\b", context) else "soft"
+    return "positive", "hard"
 
 
 def relevant_memory_fragments(fragments: Sequence[str], query_preferences: Mapping[str, Any]) -> tuple[str, ...]:

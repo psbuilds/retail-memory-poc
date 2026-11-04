@@ -1,0 +1,6 @@
+run_id,timestamp_utc,adapter,experiment_group,operation,scenario_id,customer_id,repetition,execution_order,cold_or_warm,latency_ms,adapter_latency_ms,status,returned_count,relevance_score,recommendation_match,expected_product_coverage,excluded_product_violations,error_type,error_message,response_json
+phase93-mcp-writes-20261103,2026-11-03T16:30:41.325001+00:00,mcp,memory_write,remember,,customer_001,0,0,cold,1499.175416014623,1498.8579170312732,success,4,,,,,,,
+phase93-mcp-writes-20261103,2026-11-03T16:30:42.575159+00:00,mcp,memory_write,remember,,customer_002,0,1,warm,1250.0000830041245,1249.9734169687144,success,4,,,,,,,
+phase93-mcp-writes-20261103,2026-11-03T16:30:43.903390+00:00,mcp,memory_write,remember,,customer_003,0,2,warm,1328.229165985249,1328.207625017967,success,5,,,,,,,
+phase93-mcp-writes-20261103,2026-11-03T16:30:45.214745+00:00,mcp,memory_write,remember,,customer_004,0,3,warm,1311.355583020486,1311.3367079640739,success,5,,,,,,,
+phase93-mcp-writes-20261103,2026-11-03T16:30:46.449238+00:00,mcp,memory_write,remember,,customer_005,0,4,warm,1234.4942080089822,1234.4750000047497,success,5,,,,,,,

@@ -41,6 +41,12 @@ def test_extraction_supports_structured_positive_and_negative_preferences():
     assert extract_preferences("I don't want wired headphones")["wireless"] is True
     assert extract_preferences("I don't need ANC headphones")["noise_cancellation"] is False
     assert extract_preferences("Avoid noise cancellation")["noise_cancellation"] is False
+    assert extract_preferences("I would rather avoid wireless headphones")["wireless"] is False
+    assert "wireless" not in extract_preferences("Wireless is not important to me")
+    assert extract_preferences("I want headphones without Bluetooth")["wireless"] is False
+    assert "noise_cancellation" not in extract_preferences("I don't mind having ANC")
+    assert "noise_cancellation" not in extract_preferences("Noise cancellation is not a priority")
+    assert "noise_cancellation" not in extract_preferences("I want ANC, although I can do without it")
 
 
 def test_query_overrides_memory_and_memory_enriches_query():
@@ -49,6 +55,10 @@ def test_query_overrides_memory_and_memory_enriches_query():
     }
     assert "leather" not in merge_preferences({"excluded_features": ("leather",)}, {"required_features": ("leather",)}).get("excluded_features", ())
     assert "leather" not in merge_preferences({"required_features": ("leather",)}, {"excluded_features": ("leather",)}).get("required_features", ())
+    assert extract_preferences("I want wireless headphones, actually make that wired")["wireless"] is False
+    assert extract_preferences("Show wired headphones, but wireless is also fine").get("wireless") is False
+    assert extract_preferences("Avoid leather. Actually, leather is fine.").get("excluded_features", ()) == ()
+    assert extract_preferences("I want leather, not synthetic material")["required_features"] == ("leather",)
 
 
 def test_remember_is_one_unchanged_adapter_call():

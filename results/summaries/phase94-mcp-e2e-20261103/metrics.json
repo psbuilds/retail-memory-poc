@@ -1,0 +1,16 @@
+{
+  "mcp:e2e": {
+    "runs": 2,
+    "mean_ms": 60.698895511450246,
+    "median_ms": 60.698895511450246,
+    "stdev_ms": 5.067274972500453,
+    "min_ms": 57.1157910162583,
+    "max_ms": 64.28200000664219,
+    "p95_ms": 63.923689557123,
+    "total_operations": 10,
+    "successful_operations": 2,
+    "failed_operations": 8,
+    "success_rate": 0.2,
+    "failure_rate": 0.8
+  }
+}

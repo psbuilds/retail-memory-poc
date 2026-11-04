@@ -1,0 +1,16 @@
+{
+  "cli:e2e": {
+    "runs": 7,
+    "mean_ms": 4037.142642574119,
+    "median_ms": 3372.532040986698,
+    "stdev_ms": 1993.8259872420479,
+    "min_ms": 2973.5537500237115,
+    "max_ms": 8496.162333001848,
+    "p95_ms": 7123.413558007452,
+    "total_operations": 10,
+    "successful_operations": 7,
+    "failed_operations": 3,
+    "success_rate": 0.7,
+    "failure_rate": 0.3
+  }
+}
