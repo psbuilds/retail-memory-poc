@@ -1,4 +1,46 @@
+
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+
+# Python virtual environments
 .venv/
+venv/
+env/
+
+# Python generated files
 __pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local dependencies and cloned repositories
 .tools/
+
+# Cognee local runtime data
+results/cli/
+results/mcp/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.lance/
+
+# Runtime locks and logs
+*.lockfile
+*.log
+.DS_Store
+
+# IDE settings
+.idea/
+.vscode/
+
+# Temporary files
+*.tmp
+*.bak

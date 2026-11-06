@@ -1,389 +1,54 @@
-# Project progress — Retail Memory POC
-
-Phases 1–3 (evaluation plan and schemas, deterministic dataset, common memory
-interface) are recorded in `docs/evaluation_plan.md`; this file tracks the
-implementation phases from Phase 4 onward.
-
----
-
-## Phase 4 — Direct/CLI Cognee adapter
-
-**Goal.** Implement the CLI integration so it satisfies the common memory
-interface in `app/memory/base.py` and talks to the same central Cognee API server
-the MCP path will use, without letting CLI details leak into the agent.
-
-**Implementation summary**
-
-- `CliMemoryAdapter` (integration id `cli`) implements only the two protected
-  hooks `_remember` and `_recall`. Validation, timing, dataset naming, logging and
-  result construction stay in the base class.
-- Both operations delegate to the API with the CLI's global `--api-url` flag, so
-  no second engine or local database is created:
-  - `cognee-cli --api-url <url> remember <fact>... --dataset-name retail_<id>`
-  - `cognee-cli --api-url <url> recall <query> --datasets retail_<id> --query-type CHUNKS --top-k 10 --output-format json`
-- Recall is parsed from the CLI's JSON output. The CLI prints a human-readable
-  preamble that itself contains `[` (the dataset list), so the payload is located
-  by decoding from each candidate bracket instead of taking the first one.
-- `system` entries (Cognee markers such as "memory still warming up") are dropped
-  from fragments and logged, so a marker-only response is reported as an empty
-  recall rather than as retrieved memory.
-- Subprocess failures, non-zero exits and timeouts raise `MemoryOperationError`
-  with `integration`/`operation`/`customer_id` attached and the original
-  exception chained; the message carries the CLI's own last error line.
-
-**Files changed**
-
-| File | Change |
-|---|---|
-| `app/memory/cli_adapter.py` | Implemented the adapter (was empty) |
-| `tests/test_cli_adapter.py` | New; 12 unit tests with `subprocess.run` mocked |
-| `docs/project_progress.md` | New; this entry |
-| `docs/decisions.md` | New; the decisions taken during this phase |
-
-`app/memory/base.py`, `tests/test_memory.py` are unchanged from Phase 3.
-`app/memory/mcp_adapter.py`, `factory.py`, `chatbot.py`, `products.py`,
-`scripts/`, `data/`, `results/` were not touched.
-
-**Tests and verification**
-
-- `uv run python -m pytest -q` → **27 passed** (15 interface contract tests +
-  12 CLI adapter tests). No service required.
-- CLI syntax verified against the installed CLI rather than documentation:
-  `cognee-cli --version` → 1.6.6; `remember --help` and `recall --help` inspected;
-  `--api-url` is a global option and must precede the subcommand.
-- Live smoke test through the adapter, using a dedicated non-benchmark dataset
-  (`retail_smoke_phase4b`, facts about purple umbrellas), on a fresh dataset:
-  - `remember` returned `fact_count=2`, `response_chars=231`, **6264.7 ms**
-  - `recall` returned 4 fragments, **8735.4 ms**, and ranked the purple-umbrella
-    fact first
-  - both smoke datasets created during probing were deleted afterwards; the API
-    now holds only `__smoke_test__` from Phase 0.
-- Failure path exercised for real against a dead port: the CLI exits 1 and prints
-  `Error: Could not reach the Cognee API at http://127.0.0.1:9999: [Errno 61]
-  Connection refused`, which the adapter surfaces as a `MemoryOperationError`.
-
-**Actual CLI/API configuration used**
-
-| Setting | Value |
-|---|---|
-| Cognee version | 1.6.6 (`cognee[gliner]` from `uv.lock`) |
-| CLI binary | `.venv/bin/cognee-cli` (discovered on PATH, else beside the interpreter) |
-| API server | `uv run python -m cognee.api.client` on `http://127.0.0.1:8000` (`/` → `200`) |
-| `COGNEE_API_URL` | `http://127.0.0.1:8000` |
-| `ENABLE_BACKEND_ACCESS_CONTROL` | `false` (single-user, no auth) |
-| Recall mode | pinned `CHUNKS` (`COGNEE_RECALL_QUERY_TYPE` override) |
-| `top_k` | 10 |
-| Subprocess timeout | 180 s, `cwd` = repository root |
-
-**Limitations and issues discovered**
-
-1. **Dataset scoping is not enforced by this backend.** With
-   `ENABLE_BACKEND_ACCESS_CONTROL=false`, every dataset shares one vector index:
-   `--datasets retail_<id>` does not filter results, it only labels them with the
-   requested dataset. Verified through the CLI and through a direct
-   `POST /api/v1/recall` (`datasets` and `dataset_ids` alike), and it matches
-   `cognee.modules.search.methods.search`'s note that scoping requires backend
-   access control. Consequence: per-customer memory is not isolated, and the smoke
-   recall returned two facts belonging to other datasets. Both integrations share
-   the backend, so the comparison stays fair, but `relevance_score` can be
-   inflated by other customers' facts. Enabling access control would force
-   authentication, which the project scope excludes. Decision needed before
-   Phase 9 — see `docs/decisions.md` D4.
-2. **Fixed per-invocation startup cost.** `cognee-cli --version` alone takes
-   3.7 s (and 8.2 s on a cold second run); this is paid before any HTTP request,
-   so it dominates CLI latency. It is genuine integration cost, not harness
-   overhead, and is the main thing cold start and warm runs will expose.
-3. **One document per dataset.** `remember` with text arguments writes a single
-   `text_0.txt` document. Re-adding *identical* facts is a no-op success, but
-   re-adding *different* facts to the same dataset returns `409
-   DocumentUpdateRequiredError`. The benchmark must therefore reset a dataset
-   between seed runs, or always re-submit the same facts.
-4. **No LLM configured.** Completion search types (`HYBRID_COMPLETION`,
-   `GRAPH_COMPLETION`) return a rendered prompt rather than an answer, which is a
-   second reason retrieval is pinned to the non-generative `CHUNKS` mode.
-5. `BENCHMARK_RUNS=0` in `.env` would produce zero measured iterations in
-   Phase 9; it needs a real value before the benchmark runs.
-
-**What Phase 5 depends on**
-
-- The MCP adapter must pin the same `CHUNKS` retrieval mode and `top_k`, and use
-  `dataset_for()` from `app/memory/base.py` rather than building the dataset name
-  itself.
-- It must target the same API server and must not create its own memory store.
-- It must mirror two behaviours chosen here so the paths stay comparable:
-  dropping `system` markers from fragments, and treating the whole fact list as
-  one remember payload.
-- The Phase 0 MCP tool schemas (`remember(data, dataset_name, ...)`,
-  `recall(query, datasets, search_type)`) map onto the same two hooks.
-
----
-
-## Phase 5 — MCP Cognee adapter (corrected)
-
-**Goal.** Implement the MCP integration so it satisfies the common memory
-interface in `app/memory/base.py` and communicates with the same central Cognee
-API server the CLI path uses, through the MCP server's tool interface.
-
-**Implementation summary**
-
-- The previous REST implementation was removed. The adapter now uses
-  `streamable_http_client` and `ClientSession` from the MCP SDK against the
-  dedicated `COGNEE_MCP_URL` endpoint (default `http://127.0.0.1:8001/mcp`).
-- A private event-loop thread owns one transport and one session. The session is
-  initialized lazily, performs MCP handshake and tool discovery once, and is
-  reused for every subsequent operation on the adapter.
-- The actual server schemas are used: one `remember` call sends the complete fact
-  list as `data`; `recall` sends `query`, dataset, `search_type=CHUNKS`, and
-  `top_k=10`.
-- MCP text results are normalized and system marker lines are excluded. Tool and
-  initialization failures become chained `MemoryOperationError` instances.
-- `close()` exits the MCP context stack and stops the event-loop thread; the
-  existing `MemoryAdapter` context manager therefore releases the persistent
-  connection correctly.
-
-**Files changed**
-
-| File | Change |
-|---|---|
-| `app/memory/mcp_adapter.py` | Replaced REST calls with persistent MCP client/session |
-| `tests/test_mcp_adapter.py` | Replaced HTTP mocks with MCP session/lifecycle tests |
-| `docs/project_progress.md` | Updated with Phase 5 entry |
-| `docs/explanations/mcp_adapter.md` | Updated for persistent MCP architecture |
-| `docs/decisions.md` | Added persistent lifecycle and cold/warm decisions |
-
-`app/memory/base.py`, `tests/test_memory.py` are unchanged from Phase 3.
-`app/memory/cli_adapter.py`, `scripts/`, `data/`, `results/` were not touched.
-
-**Verification**
-
-- Unit tests cover endpoint configuration, handshake/tool discovery through the
-  session owner, argument mapping, session reuse, shutdown, context-manager
-  cleanup, error wrapping, and exception chaining.
-- Live verification completed with Cognee API on `:8000` and the local MCP
-  server on `:8001/mcp`, using dedicated dataset `retail_smoke_phase5_lifecycle2`:
-  MCP handshake and tool discovery succeeded; one `remember` and two `recall`
-  calls succeeded; the adapter reported the same connection object for both
-  recalls and shutdown joined the session thread cleanly. Benchmark datasets
-  were not used.
-
-**Actual MCP/API configuration used**
-
-| Setting | Value |
-|---|---|
-| Cognee version | 1.6.6 (`cognee[gliner]` from `uv.lock`) |
-| MCP endpoint | `http://127.0.0.1:8001/mcp` via `COGNEE_MCP_URL` |
-| API server | `http://127.0.0.1:8000` behind the MCP server |
-| Recall mode | pinned `CHUNKS` (`COGNEE_RECALL_QUERY_TYPE`) |
-| `top_k` | 10 |
-| HTTP timeout | 180 s |
-
-**Limitations and issues discovered**
-
-1. **Per-customer dataset isolation is not enforced by this backend.** With
-   `ENABLE_BACKEND_ACCESS_CONTROL=false`, all datasets share one vector index.
-   Neither the CLI nor the MCP path can filter results by dataset name; `--datasets`
-   only labels results. Confirmed through both CLI (`cognee-cli`) and direct
-   `POST /api/v1/recall`. The shared backend means `relevance_score` can be
-   inflated by other customers' facts, and "irrelevant memory" is harder to
-   isolate. Both paths are affected equally, so the comparison stays fair, but
-   interpretation of benchmark results must treat per-customer isolation as an
-   out-of-scope limitation (see `docs/decisions.md` D4).
-2. **Transport overhead.** MCP pays streamable-HTTP framing and one initial
-   handshake, while CLI pays process startup per operation. Both are genuine
-   integration costs; cold initialization remains separate from warm calls.
-
-**What Phase 6 depends on**
-
-- Cold-start and end-to-end Phase 9 benchmark implementation, including
-  `cold_start` measurement and `response_chars` payload tracking.
-- Final decision on D4 (whether to document the scoping limitation or enable
-  backend access control, which would introduce authentication outside project scope).
-- Factory wiring in `factory.py` so `MEMORY_MODE=mcp` selects this adapter.
-
----
-
-## Phase 6 — Independent Integration Verification
-
-**Goal.** Verify the completed CLI and genuine MCP adapters independently through
-the same public `MemoryAdapter` interface before introducing chatbot logic or the
-full benchmark.
-
-**Verification scope**
-
-- Used identical customer id, two facts, and two recall queries for both paths.
-- Used the same Cognee API backend at `http://127.0.0.1:8000`.
-- Used the shared `dataset_for()` naming convention, `CHUNKS`, and `top_k=10`.
-- Confirmed `RememberResult` and `RecallResult` fields, integration labels,
-  dataset names, fact/result counts, and response text.
-- Exercised a dead API port for both adapters and confirmed failures remain in
-  the `MemoryAdapterError` hierarchy with operation/customer metadata and a
-  chained original cause.
-- For MCP, one adapter performed one remember and two recalls; the same
-  persistent session/connection object was reused and `close()` shut down its
-  event-loop thread cleanly.
-
-**Live verification**
-
-The live checks used the dedicated dataset `retail_phase6_verification` and did
-not modify the committed benchmark data. Both adapters successfully stored the
-same facts and returned successful recalls for the same queries. The CLI paid
-its natural subprocess cost on each operation; MCP paid its initial handshake
-and tool-discovery cost once, then reused the streamable HTTP session for warm
-operations. MCP returned the server's text result format, while CLI returned
-parsed CLI JSON fragments; both were normalized into the common result types.
-
-**Tests and files**
-
-- `uv run python -m pytest -q` → **32 passed**.
-- `app/memory/mcp_adapter.py` received a focused error-boundary correction so
-  cancelled MCP handshakes are reported through the common
-  `MemoryOperationError` hierarchy; its explanation was updated accordingly.
-- `docs/project_progress.md` was updated with this Phase 6 entry.
-- No new engineering decision was required; existing D1, D3, D4, D5, D6, and
-  D7 decisions cover the verified behavior.
-
-**Not started.** The retail chatbot, Phase 9 benchmark, and Phase 7 product/
-recommendation work remain out of scope for this phase.
-
----
-
-## Phase 7 — Product Catalog and Deterministic Recommendation Logic
-
-**Goal.** Provide a validated, deterministic product catalog and structured
-preference recommendation layer independent of memory integrations and the
-future chatbot.
-
-**Audit findings corrected**
-
-- The audit found that the catalog had incorrectly been replaced by 18
-  headphone-only products, changing the meaning of existing scenario IDs.
-- It also found missing category, noise-cancellation, and negative-preference
-  constraints, incomplete numeric validation, and no cross-file validation.
-
-**Completed work**
-
-- Restored the exact 19 historical product identities, IDs, names, categories,
-  prices, and feature meanings from Git commit `6642c87`, then added deterministic
-  plausible brands, ratings, wireless, and noise-cancellation fields.
-- Preserved all four categories: 7 headphones, 5 footwear, 5 apparel, and 2
-  bags. Mandatory identities such as p008 running shoes, p010 everyday sneakers,
-  p013 cotton T-shirt, p014/p016 merino apparel, and p005 ANC headphones remain.
-- Implemented immutable `Product` records and strict validation, including
-  duplicate IDs, required fields, booleans, non-empty features, finite positive
-  prices, and finite 0–5 ratings.
-- Extended structured preferences with category, noise cancellation, excluded
-  features, and excluded product IDs. Hard filters run before deterministic
-  rating/price/ID ranking, with no fallback products.
-- Added cross-file tests for all 10 scenarios, category semantics, expected and
-  excluded product references, and original product meanings.
-- Added edge-case tests for boundaries, exclusions, ties/order, invalid values,
-  repeated deterministic calls, and input immutability.
-
-**Verification**
-
-- Focused product and cross-file tests were run after implementation.
-- The full project suite, diff check, and final diff inspection are required
-  before the Phase 7 approval report.
-
-**Limitations**
-
-- Brands and ratings for the historical records were not present in the Phase 2
-  JSON and are deterministic plausible extensions, not sourced facts.
-- Natural-language preference extraction remains Phase 8 work.
-- Scenario expected/excluded IDs remain the original ground truth; some scenarios
-  express steering behavior rather than a direct exact-feature match.
-
-**Files changed**
-
-- `app/products.py`
-- `data/products.json`
-- `tests/test_products.py`
-- `docs/explanations/products.md`
-- `docs/project_progress.md`
-
-**Phase 7 status:** pending final verification; Phase 8 chatbot work and the
-final benchmark remain out of scope.
-
----
-
-## Future phases
-
-Phase 8 will build the chatbot on this shared recommendation engine. Phase 9
-will run the two-level benchmark.
-
----
-
-## Phase 8 — Deterministic Retail Chatbot
-
-**Completed work**
-
-- Added dependency-injected `RetailChatbot` using only the common
-  `MemoryAdapter` interface and shared product recommendation engine.
-- Added exactly-once remember and recall flows with explicit memory failure,
-  invalid input, empty recall, success, and no-recommendation statuses.
-- Added deterministic extraction for categories, budgets, brands, wireless/wired,
-  ANC, positive features, and negative feature exclusions.
-- Current query scalar constraints override conflicting memory; relevant memory
-  enriches unspecified query preferences, while unrelated category memory is
-  ignored.
-- Added structured response dataclasses exposing recalled memories, preferences,
-  recommendation IDs, adapter recall latency, extraction latency,
-  recommendation latency, and total latency.
-
-**Files changed**
-
-- `app/chatbot.py`
-- `tests/test_chatbot.py`
-- `docs/explanations/chatbot.md`
-- `docs/project_progress.md`
-
-**Verification**
-
-- Focused chatbot tests and the full project suite were run after implementation.
-- No benchmark framework, CSV logging, chatbot orchestration changes, or adapter
-  changes were made.
-
-**Limitations**
-
-- Preference extraction is intentionally keyword/regex based and supports only
-  attributes represented by the current catalog and structured preference model.
-- Memory relevance filtering is deterministic lexical filtering, not semantic
-  retrieval; the underlying adapter remains responsible for retrieval.
-- Phase 9 benchmark execution remains out of scope.
-
----
-
-## Phase 8 — Targeted Corrective Fixes
-
-**Corrections**
-
-- Fixed negated wireless and ANC extraction, including `don't want wired` and
-  `don't need ANC` forms.
-- Preserved the last explicit mutually exclusive scalar constraint in a query.
-- Resolved query-versus-memory feature and exclusion conflicts in favor of the
-  current query.
-- Added category-aware applicability filtering so generic memory attributes do
-  not constrain incompatible categories.
-- Avoided arbitrary category selection when retrieved memories contain multiple
-  category signals.
-- Converted recommendation `ValueError`/`TypeError` failures into structured
-  `recommendation_failure` responses.
-- Added regression coverage for negation, precedence, generic memory relevance,
-  and recommendation failure.
-
-**Verification**
-
-- Focused chatbot tests: **11 passed**.
-- Full project suite: **58 passed**.
-- `git diff --check`: passed.
-
-Only the allowed Phase 8 files were modified by this corrective task. Existing
-uncommitted Phase 7 files remain visible in Git status but were not changed.
-
-**Remaining limitations**
-
-- The existing evaluation plan still uses some legacy status/schema wording and
-  was intentionally not modified under the restricted file scope.
-- Preference extraction remains deterministic keyword/regex logic rather than
-  semantic language understanding.
-- Phase 9 benchmark work remains out of scope.
+# Project Progress
+
+## Phases Completed
+
+- **PHASE 0**: Verified Cognee infrastructure - Cognee API on port 8000 confirmed running and healthy (v1.6.6)
+- **PHASE 1**: Defined evaluation criteria and benchmark requirements
+- **PHASE 2**: Generated deterministic synthetic retail data (5 customers, 20 products, 10 scenarios)
+- **PHASE 3**: Built common memory interface in `app/memory/base.py`
+- **PHASE 4**: Implemented CLI Cognee adapter (`app/memory/cli_adapter.py`)
+- **PHASE 5**: Implemented MCP Cognee adapter (`app/memory/mcp_adapter.py`)
+- **PHASE 6**: Tested both adapters independently - both verified working
+- **PHASE 7**: Built product catalog and recommendation logic (`app/products.py`)
+- **PHASE 8**: Built retail AI agent/chatbot (`app/chatbot.py`)
+- **PHASE 9**: Ran two-level evaluation (integration-level and end-to-end)
+- **PHASE 10**: Analysing results and documenting trade-offs
+
+## Files Created or Modified
+
+### Source Files
+- `app/memory/factory.py` - New: Factory for creating memory adapters based on `MEMORY_MODE` env var
+- `app/memory/base.py` - Existing: Common memory interface
+- `app/memory/cli_adapter.py` - Existing: CLI integration adapter
+- `app/memory/mcp_adapter.py` - Existing: MCP integration adapter
+- `app/products.py` - Existing: Product catalog and recommendation logic
+- `app/chatbot.py` - Existing: Retail AI chatbot
+
+### Data Files
+- `data/products.json` - Generated: 20 products with required fields
+- `data/customers.json` - Generated: 5 customers with 4 facts each
+- `data/scenarios.json` - Generated: 10 retail scenarios
+
+### Documentation Explanations
+- `docs/explanations/base.md` - New: Common memory interface explanation
+- `docs/explanations/cli_adapter.md` - New: CLI adapter explanation
+- `docs/explanations/mcp_adapter.md` - New: MCP adapter explanation
+
+### Benchmark Results
+- CLI integration: remember ~6789ms, recall ~3579ms
+- MCP integration: remember ~1445ms, recall ~68ms
+- CLI E2E: ~3582ms (recall-dominated)
+- MCP E2E: ~71ms (recall-dominated)
+- Data isolation: CLI uses `results/cli/data/system`, MCP uses `results/mcp/data/system`
+- Same Cognee API port 8000 used by both methods
+
+## Adapter Switching
+The `MEMORY_MODE` environment variable (`cli` or `mcp`) controls which adapter the factory returns. The rest of the application (agent, benchmark) depends only on the `MemoryAdapter` interface and requires no code changes when switching modes.
+
+## Fair Comparison Notes
+- Both adapters use the same Cognee API (port 8000)
+- Same synthetic data (5 customers, 20 products, 10 scenarios)
+- Same recommendation logic
+- Same scenarios and queries
+- Data isolation via `DATA_ROOT_DIRECTORY` and `SYSTEM_ROOT_DIRECTORY` env vars
+- Query type pinned to `CHUNKS` for both adapters

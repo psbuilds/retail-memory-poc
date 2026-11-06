@@ -1,21 +1,309 @@
 [
-  {"product_id":"p001","name":"Wireless Earbuds","category":"headphones","brand":"SoundGo","price":2499,"features":["wireless","lightweight","travel-friendly","in-ear"],"wireless":true,"noise_cancellation":false,"rating":4.1},
-  {"product_id":"p002","name":"Over-Ear Studio Headphones","category":"headphones","brand":"Auralite","price":8999,"features":["over-ear","noise-cancelling","wired","bulky"],"wireless":false,"noise_cancellation":true,"rating":4.3},
-  {"product_id":"p003","name":"Budget Wired Earphones","category":"headphones","brand":"MetroBeat","price":799,"features":["wired","in-ear","lightweight"],"wireless":false,"noise_cancellation":false,"rating":3.8},
-  {"product_id":"p004","name":"Bluetooth Neckband","category":"headphones","brand":"Bassline","price":1999,"features":["wireless","neckband","long-battery","travel-friendly"],"wireless":true,"noise_cancellation":false,"rating":4.0},
-  {"product_id":"p005","name":"Wireless Over-Ear ANC Headphones","category":"headphones","brand":"EchoPeak","price":7499,"features":["wireless","over-ear","noise-cancelling","call-friendly"],"wireless":true,"noise_cancellation":true,"rating":4.7},
-  {"product_id":"p006","name":"Premium ANC Over-Ear Headset","category":"headphones","brand":"Northstar","price":11999,"features":["wireless","over-ear","noise-cancelling","call-friendly"],"wireless":true,"noise_cancellation":true,"rating":4.9},
-  {"product_id":"p007","name":"Wired In-Ear Monitor","category":"headphones","brand":"VelvetSound","price":1499,"features":["wired","in-ear","studio"],"wireless":false,"noise_cancellation":false,"rating":4.2},
-  {"product_id":"p008","name":"Running Shoes","category":"footwear","brand":"StridePro","price":3499,"features":["lightweight","breathable","running"],"wireless":false,"noise_cancellation":false,"rating":4.5},
-  {"product_id":"p009","name":"Trail Hiking Shoes","category":"footwear","brand":"TrailPeak","price":5499,"features":["durable","waterproof","hiking","heavy"],"wireless":false,"noise_cancellation":false,"rating":4.2},
-  {"product_id":"p010","name":"Everyday Sneakers","category":"footwear","brand":"StridePro","price":2199,"features":["lightweight","breathable","casual"],"wireless":false,"noise_cancellation":false,"rating":4.1},
-  {"product_id":"p011","name":"Heavy Waterproof Boots","category":"footwear","brand":"TrailPeak","price":6999,"features":["waterproof","hiking","heavy","bulky"],"wireless":false,"noise_cancellation":false,"rating":4.0},
-  {"product_id":"p012","name":"Cushioned Walking Shoes","category":"footwear","brand":"StridePro","price":2999,"features":["cushioned","lightweight","casual"],"wireless":false,"noise_cancellation":false,"rating":4.3},
-  {"product_id":"p013","name":"Cotton Casual T-Shirt","category":"apparel","brand":"CottonWay","price":899,"features":["cotton","casual","regular-fit"],"wireless":false,"noise_cancellation":false,"rating":4.2},
-  {"product_id":"p014","name":"Merino Travel Hoodie","category":"apparel","brand":"WoolTrail","price":4299,"features":["merino","travel-friendly","warm","lightweight","packable"],"wireless":false,"noise_cancellation":false,"rating":4.6},
-  {"product_id":"p015","name":"Synthetic Gym T-Shirt","category":"apparel","brand":"ActiveFlex","price":749,"features":["synthetic","quick-dry","athletic"],"wireless":false,"noise_cancellation":false,"rating":4.0},
-  {"product_id":"p016","name":"Merino Base Layer","category":"apparel","brand":"WoolTrail","price":3899,"features":["merino","warm","packable","travel-friendly"],"wireless":false,"noise_cancellation":false,"rating":4.5},
-  {"product_id":"p017","name":"Bulky Puffer Jacket","category":"apparel","brand":"ActiveFlex","price":6499,"features":["bulky","waterproof","warm","heavy"],"wireless":false,"noise_cancellation":false,"rating":3.9},
-  {"product_id":"p018","name":"Packable Travel Backpack","category":"bags","brand":"CarryLite","price":2799,"features":["packable","lightweight","travel-friendly"],"wireless":false,"noise_cancellation":false,"rating":4.4},
-  {"product_id":"p019","name":"Leather Work Tote","category":"bags","brand":"CarryLite","price":5599,"features":["leather","heavy","bulky","professional"],"wireless":false,"noise_cancellation":false,"rating":4.3}
+  {
+    "name": "Wireless Earbuds",
+    "category": "headphones",
+    "brand": "AudioTech",
+    "price": 2499,
+    "features": [
+      "wireless",
+      "lightweight",
+      "travel-friendly",
+      "in-ear"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.5,
+    "product_id": "p001"
+  },
+  {
+    "name": "Over-Ear Studio Headphones",
+    "category": "headphones",
+    "brand": "SoundMax",
+    "price": 8999,
+    "features": [
+      "over-ear",
+      "noise-cancelling",
+      "wired",
+      "bulky"
+    ],
+    "wireless": false,
+    "noise_cancellation": true,
+    "rating": 4.8,
+    "product_id": "p002"
+  },
+  {
+    "name": "Budget Wired Earphones",
+    "category": "headphones",
+    "brand": "Basic",
+    "price": 799,
+    "features": [
+      "wired",
+      "in-ear",
+      "lightweight"
+    ],
+    "wireless": false,
+    "noise_cancellation": false,
+    "rating": 4.2,
+    "product_id": "p003"
+  },
+  {
+    "name": "Bluetooth Neckband",
+    "category": "headphones",
+    "brand": "FitAudio",
+    "price": 1999,
+    "features": [
+      "wireless",
+      "neckband",
+      "long-battery",
+      "travel-friendly"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.3,
+    "product_id": "p004"
+  },
+  {
+    "name": "Wireless Over-Ear ANC Headphones",
+    "category": "headphones",
+    "brand": "Bose",
+    "price": 7499,
+    "features": [
+      "wireless",
+      "over-ear",
+      "noise-cancelling",
+      "call-friendly"
+    ],
+    "wireless": true,
+    "noise_cancellation": true,
+    "rating": 4.7,
+    "product_id": "p005"
+  },
+  {
+    "name": "Premium ANC Over-Ear Headset",
+    "category": "headphones",
+    "brand": "Sennheiser",
+    "price": 11999,
+    "features": [
+      "wireless",
+      "over-ear",
+      "noise-cancelling",
+      "call-friendly"
+    ],
+    "wireless": true,
+    "noise_cancellation": true,
+    "rating": 4.9,
+    "product_id": "p006"
+  },
+  {
+    "name": "Wired In-Ear Monitor",
+    "category": "headphones",
+    "brand": "AudioFi",
+    "price": 1499,
+    "features": [
+      "wired",
+      "in-ear",
+      "lightweight"
+    ],
+    "wireless": false,
+    "noise_cancellation": false,
+    "rating": 4.4,
+    "product_id": "p007"
+  },
+  {
+    "name": "Sport Wireless Headphones",
+    "category": "headphones",
+    "brand": "Active",
+    "price": 3499,
+    "features": [
+      "wireless",
+      "sweat-resistant",
+      "secure-fit"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.1,
+    "product_id": "p008"
+  },
+  {
+    "name": "Foldable Portable Headphones",
+    "category": "headphones",
+    "brand": "TravelGear",
+    "price": 2999,
+    "features": [
+      "wireless",
+      "foldable",
+      "lightweight",
+      "foldable-case"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.0,
+    "product_id": "p009"
+  },
+  {
+    "name": "Gaming Wireless Headset",
+    "category": "headphones",
+    "brand": "GameX",
+    "price": 5999,
+    "features": [
+      "wireless",
+      "noise-cancelling",
+      "mic-enabled",
+      "RGB-lighting"
+    ],
+    "wireless": true,
+    "noise_cancellation": true,
+    "rating": 4.6,
+    "product_id": "p010"
+  },
+  {
+    "name": "Compact Portable Speaker",
+    "category": "audio",
+    "brand": "BassBox",
+    "price": 1299,
+    "features": [
+      "wireless",
+      "compact",
+      "long-battery"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.3,
+    "product_id": "p011"
+  },
+  {
+    "name": "Noise-Cancelling Home Speaker",
+    "category": "audio",
+    "brand": "HomeAudio",
+    "price": 2499,
+    "features": [
+      "wireless",
+      "noise-cancellation",
+      "multi-room"
+    ],
+    "wireless": true,
+    "noise_cancellation": true,
+    "rating": 4.5,
+    "product_id": "p012"
+  },
+  {
+    "name": "Vintage Turntable",
+    "category": "audio",
+    "brand": "VinylLab",
+    "price": 4999,
+    "features": [
+      "wired",
+      "bluetooth",
+      "usb-recording"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.2,
+    "product_id": "p013"
+  },
+  {
+    "name": "Compact Bluetooth Speaker",
+    "category": "audio",
+    "brand": "PocketSound",
+    "price": 899,
+    "features": [
+      "wireless",
+      "compact",
+      "waterproof"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.0,
+    "product_id": "p014"
+  },
+  {
+    "name": "Wireless Party Speaker",
+    "category": "audio",
+    "brand": "PartyPlus",
+    "price": 3499,
+    "features": [
+      "wireless",
+      "light-show",
+      "long-battery"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.4,
+    "product_id": "p015"
+  },
+  {
+    "name": "Noise-Isolating Earbuds",
+    "category": "earbuds",
+    "brand": "QuietTone",
+    "price": 1799,
+    "features": [
+      "wireless",
+      "noise-isolating",
+      "secure-fit"
+    ],
+    "wireless": true,
+    "noise_cancellation": true,
+    "rating": 4.3,
+    "product_id": "p016"
+  },
+  {
+    "name": "True Wireless Sports Earbuds",
+    "category": "earbuds",
+    "brand": "SportBeat",
+    "price": 2199,
+    "features": [
+      "wireless",
+      "waterproof",
+      "ear-hook"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 4.5,
+    "product_id": "p017"
+  },
+  {
+    "name": "Studio Monitor Headphones",
+    "category": "professional",
+    "brand": "StudioPro",
+    "price": 6499,
+    "features": [
+      "wired",
+      "open-back",
+      "flat-response"
+    ],
+    "wireless": false,
+    "noise_cancellation": false,
+    "rating": 4.8,
+    "product_id": "p018"
+  },
+  {
+    "name": "Budget Wireless Earbuds",
+    "category": "earbuds",
+    "brand": "Value",
+    "price": 999,
+    "features": [
+      "wireless",
+      "basic",
+      "lightweight"
+    ],
+    "wireless": true,
+    "noise_cancellation": false,
+    "rating": 3.9,
+    "product_id": "p019"
+  },
+  {
+    "name": "Premium Noise-Cancelling Headphones",
+    "category": "headphones",
+    "brand": "Luxury",
+    "price": 9999,
+    "features": [
+      "wireless",
+      "noise-cancelling",
+      "premium-materials"
+    ],
+    "wireless": true,
+    "noise_cancellation": true,
+    "rating": 4.9,
+    "product_id": "p020"
+  }
 ]
